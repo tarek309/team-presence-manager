@@ -1,7 +1,7 @@
 {
-  "name": "team-presence-frontend",
+  "name": "team-presence-manager-frontend",
   "version": "1.0.0",
-  "description": "Frontend React pour l'application de gestion de présences d'équipe de football",
+  "description": "Interface utilisateur pour la gestion de présences d'équipe de football",
   "type": "module",
   "scripts": {
     "dev": "vite",
