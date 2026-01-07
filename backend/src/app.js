@@ -1,30 +1,68 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-// Création de l'application Express
 const app = express();
 
-// Configuration des middlewares
+// Middlewares de sécurité
+app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
 
-app.use(express.json());
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limite de 100 requêtes par fenêtre par IP
+  message: {
+    success: false,
+    message: 'Trop de requêtes depuis cette IP, réessayez plus tard.'
+  }
+});
+app.use('/api/', limiter);
+
+// Rate limiting spécifique pour l'authentification
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limite de 5 tentatives de connexion par IP
+  message: {
+    success: false,
+    message: 'Trop de tentatives de connexion, réessayez dans 15 minutes.'
+  }
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+// Parsers
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Route de test pour vérifier que l'API fonctionne
+// Logging des requêtes en développement
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+    next();
+  });
+}
+
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/events', require('./routes/events'));
+
+// Route de test
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
+  res.json({
     success: true,
-    message: 'API Team Presence Manager opérationnelle',
+    message: 'API Team Presence Manager - Service actif',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    version: process.env.npm_package_version || '1.0.0'
   });
 });
 
-// Route par défaut pour les routes non trouvées
+// Middleware de gestion des routes non trouvées
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -34,16 +72,33 @@ app.use('*', (req, res) => {
 });
 
 // Middleware de gestion des erreurs globales
-app.use((err, req, res, next) => {
-  console.error('Erreur serveur:', err.stack);
-  
-  res.status(err.status || 500).json({
+app.use((error, req, res, next) => {
+  console.error('Erreur globale:', error);
+
+  // Erreur de validation JSON
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    return res.status(400).json({
+      success: false,
+      message: 'JSON invalide'
+    });
+  }
+
+  // Erreur générique
+  res.status(error.status || 500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Erreur interne du serveur' 
-      : err.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+    message: error.message || 'Erreur interne du serveur',
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   });
 });
+
+const PORT = process.env.PORT || 3000;
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+    console.log(`📱 Environnement: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 URL: http://localhost:${PORT}`);
+  });
+}
 
 module.exports = app;
