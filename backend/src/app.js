@@ -50,7 +50,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/events', require('./routes/events'));
+//app.use('/api/events', require('./routes/events'));
 
 // Route de test
 app.get('/api/health', (req, res) => {
