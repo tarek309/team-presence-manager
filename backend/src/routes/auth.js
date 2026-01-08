@@ -10,10 +10,10 @@ const validateRegister = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Email invalide'),
-  body('password')
+  body('mot_de_passe')
     .isLength({ min: 6 })
     .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
-  body('name')
+  body('nom')
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('Le nom doit contenir entre 2 et 100 caractères'),
@@ -29,7 +29,7 @@ const validateLogin = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Email invalide'),
-  body('password')
+  body('mot_de_passe')
     .notEmpty()
     .withMessage('Mot de passe requis')
 ];
@@ -50,13 +50,13 @@ router.post('/register', validateRegister, async (req, res) => {
       });
     }
 
-    const { email, password, name, role } = req.body;
+    const { email, mot_de_passe, nom, role } = req.body;
 
     // Inscrire l'utilisateur
     const result = await AuthService.register({
       email,
-      password,
-      name,
+      mot_de_passe,
+      nom,
       role
     });
 
@@ -103,10 +103,10 @@ router.post('/login', validateLogin, async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
+    const { email, mot_de_passe } = req.body;
 
     // Connecter l'utilisateur
-    const result = await AuthService.login(email, password);
+    const result = await AuthService.login(email, mot_de_passe);
 
     console.log(`Connexion réussie: ${email}`);
 

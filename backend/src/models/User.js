@@ -1,82 +1,79 @@
-const pool = require('../config/database');
-const bcrypt = require('bcryptjs');
+/**
+ * Modèle User utilisant des requêtes SQL natives
+ * Remplace l'ancien modèle Sequelize
+ */
+
+const { pool } = require('../migrate');
+const bcrypt = require('bcrypt');
 
 class User {
   constructor(userData) {
     this.id = userData.id;
+    this.nom = userData.nom;
     this.email = userData.email;
-    this.password_hash = userData.password_hash;
-    this.name = userData.name;
+    this.mot_de_passe = userData.mot_de_passe;
     this.role = userData.role || 'player';
+    this.poste = userData.poste;
+    this.numero_maillot = userData.numero_maillot;
+    this.telephone = userData.telephone;
+    this.date_naissance = userData.date_naissance;
+    this.actif = userData.actif !== undefined ? userData.actif : true;
     this.created_at = userData.created_at;
     this.updated_at = userData.updated_at;
   }
 
   /**
-   * Crée un nouvel utilisateur
-   * @param {Object} userData - Données de l'utilisateur
-   * @param {string} userData.email - Email de l'utilisateur
-   * @param {string} userData.password - Mot de passe en clair
-   * @param {string} userData.name - Nom de l'utilisateur
-   * @param {string} [userData.role='player'] - Rôle (admin ou player)
-   * @returns {Promise<User>} L'utilisateur créé
+   * Trouve tous les utilisateurs
    */
-  static async create({ email, password, name, role = 'player' }) {
-    // Validation des données
-    if (!email || !password || !name) {
-      throw new Error('Email, mot de passe et nom sont requis');
-    }
-
-    if (!['admin', 'player'].includes(role)) {
-      throw new Error('Le rôle doit être "admin" ou "player"');
-    }
-
-    // Validation email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      throw new Error('Format d\'email invalide');
-    }
-
-    // Validation mot de passe (minimum 6 caractères)
-    if (password.length < 6) {
-      throw new Error('Le mot de passe doit contenir au moins 6 caractères');
-    }
-
+  static async findAll(options = {}) {
     try {
-      // Vérifier si l'email existe déjà
-      const existingUser = await User.findByEmail(email);
-      if (existingUser) {
-        throw new Error('Cet email est déjà utilisé');
+      let query = 'SELECT * FROM users';
+      const params = [];
+      
+      // Ajouter une condition WHERE si spécifiée
+      if (options.where) {
+        const conditions = [];
+        let paramIndex = 1;
+        
+        Object.keys(options.where).forEach(key => {
+          conditions.push(`${key} = $${paramIndex}`);
+          params.push(options.where[key]);
+          paramIndex++;
+        });
+        
+        if (conditions.length > 0) {
+          query += ' WHERE ' + conditions.join(' AND ');
+        }
       }
-
-      // Hasher le mot de passe
-      const saltRounds = 12;
-      const password_hash = await bcrypt.hash(password, saltRounds);
-
-      // Insérer en base
-      const query = `
-        INSERT INTO users (email, password_hash, name, role)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, email, name, role, created_at, updated_at
-      `;
-
-      const values = [email.toLowerCase().trim(), password_hash, name.trim(), role];
-      const result = await pool.query(query, values);
-
-      return new User(result.rows[0]);
+      
+      // Ajouter un ORDER BY si spécifié
+      if (options.order) {
+        query += ` ORDER BY ${options.order}`;
+      } else {
+        query += ' ORDER BY created_at DESC';
+      }
+      
+      const result = await pool.query(query, params);
+      return result.rows.map(row => new User(row));
     } catch (error) {
-      if (error.code === '23505') { // Contrainte unique violée
-        throw new Error('Cet email est déjà utilisé');
-      }
+      console.error('Erreur lors de la recherche des utilisateurs:', error);
       throw error;
     }
   }
 
   /**
-   * Trouve un utilisateur par email
-   * @param {string} email - Email à rechercher
-   * @returns {Promise<User|null>} L'utilisateur ou null si non trouvé
+   * Trouve un utilisateur par son ID
    */
+  static async findByPk(id) {
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+      if (result.rows.length === 0) return null;
+      return new User(result.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la recherche de l\'utilisateur par ID:', error);
+      throw error;
+    }
+  }
   static async findByEmail(email) {
     try {
       const query = 'SELECT * FROM users WHERE email = $1';
@@ -93,47 +90,160 @@ class User {
   }
 
   /**
-   * Trouve un utilisateur par ID
-   * @param {string} id - ID de l'utilisateur
-   * @returns {Promise<User|null>} L'utilisateur ou null si non trouvé
+   * Trouve un utilisateur selon des critères
    */
-  static async findById(id) {
+  static async findOne(options = {}) {
     try {
-      const query = 'SELECT * FROM users WHERE id = $1';
-      const result = await pool.query(query, [id]);
-
-      if (result.rows.length === 0) {
-        return null;
+      let query = 'SELECT * FROM users';
+      const params = [];
+      
+      if (options.where) {
+        const conditions = [];
+        let paramIndex = 1;
+        
+        Object.keys(options.where).forEach(key => {
+          conditions.push(`${key} = $${paramIndex}`);
+          params.push(options.where[key]);
+          paramIndex++;
+        });
+        
+        if (conditions.length > 0) {
+          query += ' WHERE ' + conditions.join(' AND ');
+        }
       }
-
+      
+      query += ' LIMIT 1';
+      
+      const result = await pool.query(query, params);
+      if (result.rows.length === 0) return null;
       return new User(result.rows[0]);
     } catch (error) {
-      throw new Error(`Erreur lors de la recherche utilisateur: ${error.message}`);
+      console.error('Erreur lors de la recherche de l\'utilisateur:', error);
+      throw error;
     }
   }
 
   /**
-   * Vérifie un mot de passe
-   * @param {string} password - Mot de passe en clair
-   * @returns {Promise<boolean>} True si le mot de passe est correct
+   * Crée un nouvel utilisateur
+   */
+  static async create(userData) {
+    try {
+      // Hacher le mot de passe si fourni
+      if (userData.mot_de_passe) {
+        userData.mot_de_passe = await bcrypt.hash(userData.mot_de_passe, 10);
+      }
+
+      const query = `
+        INSERT INTO users (nom, email, mot_de_passe, role, poste, numero_maillot, telephone, date_naissance, actif)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `;
+      
+      const params = [
+        userData.nom,
+        userData.email,
+        userData.mot_de_passe,
+        userData.role || 'player',
+        userData.poste,
+        userData.numero_maillot,
+        userData.telephone,
+        userData.date_naissance,
+        userData.actif !== undefined ? userData.actif : true
+      ];
+      
+      const result = await pool.query(query, params);
+      return new User(result.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'utilisateur:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Met à jour l'utilisateur courant
+   */
+  async update(updateData) {
+    try {
+      // Hacher le mot de passe si fourni
+      if (updateData.mot_de_passe) {
+        updateData.mot_de_passe = await bcrypt.hash(updateData.mot_de_passe, 10);
+      }
+
+      const fields = Object.keys(updateData);
+      const values = Object.values(updateData);
+      
+      // Construire la requête UPDATE dynamiquement
+      const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+      
+      const query = `
+        UPDATE users 
+        SET ${setClause}
+        WHERE id = $${fields.length + 1}
+        RETURNING *
+      `;
+      
+      const params = [...values, this.id];
+      
+      const result = await pool.query(query, params);
+      
+      if (result.rows.length === 0) {
+        throw new Error('Utilisateur non trouvé pour la mise à jour');
+      }
+      
+      // Mettre à jour l'instance courante avec les nouvelles données
+      const updatedUser = result.rows[0];
+      Object.keys(updatedUser).forEach(key => {
+        this[key] = updatedUser[key];
+      });
+      
+      return this;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Supprime l'utilisateur courant
+   */
+  async destroy() {
+    try {
+      const result = await pool.query('DELETE FROM users WHERE id = $1', [this.id]);
+      if (result.rowCount === 0) {
+        throw new Error('Utilisateur non trouvé pour la suppression');
+      }
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'utilisateur:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Vérifie si le mot de passe correspond
    */
   async checkPassword(password) {
     try {
-      return await bcrypt.compare(password, this.password_hash);
+      return await bcrypt.compare(password, this.mot_de_passe);
     } catch (error) {
-      throw new Error(`Erreur lors de la vérification du mot de passe: ${error.message}`);
+      console.error('Erreur lors de la vérification du mot de passe:', error);
+      return false;
     }
   }
 
   /**
-   * Retourne les données publiques de l'utilisateur
-   * @returns {Object} Données sans le hash du mot de passe
+   * Retourne les données de l'utilisateur sans le mot de passe
    */
+  toJSON() {
+    const userData = { ...this };
+    delete userData.mot_de_passe;
+    return userData;
+  }
   toPublic() {
     return {
       id: this.id,
       email: this.email,
-      name: this.name,
+      nom: this.nom,
       role: this.role,
       created_at: this.created_at,
       updated_at: this.updated_at
@@ -141,25 +251,33 @@ class User {
   }
 
   /**
-   * Vérifie si l'utilisateur est admin
-   * @returns {boolean} True si admin
+   * Compte le nombre total d'utilisateurs
    */
-  isAdmin() {
-    return this.role === 'admin';
-  }
-
-  /**
-   * Récupère tous les utilisateurs (pour admin)
-   * @returns {Promise<User[]>} Liste des utilisateurs
-   */
-  static async findAll() {
+  static async count(options = {}) {
     try {
-      const query = 'SELECT * FROM users ORDER BY created_at DESC';
-      const result = await pool.query(query);
-
-      return result.rows.map(row => new User(row));
+      let query = 'SELECT COUNT(*) as count FROM users';
+      const params = [];
+      
+      if (options.where) {
+        const conditions = [];
+        let paramIndex = 1;
+        
+        Object.keys(options.where).forEach(key => {
+          conditions.push(`${key} = $${paramIndex}`);
+          params.push(options.where[key]);
+          paramIndex++;
+        });
+        
+        if (conditions.length > 0) {
+          query += ' WHERE ' + conditions.join(' AND ');
+        }
+      }
+      
+      const result = await pool.query(query, params);
+      return parseInt(result.rows[0].count);
     } catch (error) {
-      throw new Error(`Erreur lors de la récupération des utilisateurs: ${error.message}`);
+      console.error('Erreur lors du comptage des utilisateurs:', error);
+      throw error;
     }
   }
 }
