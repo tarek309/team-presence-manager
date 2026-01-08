@@ -5,9 +5,9 @@ const helmet = require('helmet');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
-const adminRoutes = require('./routes/admin');
-const playerRoutes = require('./routes/player');
-const matchRoutes = require('./routes/match');
+//const adminRoutes = require('./routes/admin');
+//const playerRoutes = require('./routes/player');
+//const matchRoutes = require('./routes/match');
 const { getAvailablePort } = require('./utils/portUtils');
 
 const app = express();
@@ -35,9 +35,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/player', playerRoutes);
-app.use('/api/matches', matchRoutes);
+//app.use('/api/admin', adminRoutes);
+//app.use('/api/player', playerRoutes);
+//app.use('/api/matches', matchRoutes);
 
 // Route de health check
 app.get('/health', (req, res) => {
