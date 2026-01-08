@@ -1,33 +1,43 @@
 {
-  "name": "team-presence-backend",
+  "name": "team-presence-manager-backend",
   "version": "1.0.0",
   "description": "Backend pour l'application de gestion de présences d'équipe de football",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "echo \"Tests à implémenter\" && exit 0"
+    "dev": "nodemon src/server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "migrate": "node src/scripts/migrate.js",
+    "seed": "node src/scripts/seed.js"
   },
   "keywords": [
     "football",
     "presence",
     "team",
-    "management",
-    "express",
-    "api"
+    "management"
   ],
   "author": "Team Presence Manager",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5"
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
   },
   "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=16.0.0"
   }
 }
