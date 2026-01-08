@@ -74,6 +74,20 @@ class User {
       throw error;
     }
   }
+  static async findByEmail(email) {
+    try {
+      const query = 'SELECT * FROM users WHERE email = $1';
+      const result = await pool.query(query, [email.toLowerCase().trim()]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return new User(result.rows[0]);
+    } catch (error) {
+      throw new Error(`Erreur lors de la recherche utilisateur: ${error.message}`);
+    }
+  }
 
   /**
    * Trouve un utilisateur selon des critères
@@ -224,6 +238,16 @@ class User {
     const userData = { ...this };
     delete userData.mot_de_passe;
     return userData;
+  }
+  toPublic() {
+    return {
+      id: this.id,
+      email: this.email,
+      nom: this.nom,
+      role: this.role,
+      created_at: this.created_at,
+      updated_at: this.updated_at
+    };
   }
 
   /**
