@@ -1,84 +1,28 @@
+// backend/src/routes/matches.js
 const express = require('express');
-const {
-  createMatch,
-  getAllMatches,
-  getMatchById,
-  updateMatch,
-  deleteMatch,
-  togglePresence
-} = require('../controllers/matchController');
-const { authenticate, requireAdmin } = require('../middleware/auth');
-const {
-  validateCreateMatch,
-  validateUpdateMatch,
-  validateQueryParams
-} = require('../middleware/validateMatch');
-
 const router = express.Router();
+const matchesController = require('../controllers/matchesController');
+const { authenticateToken } = require('../middleware/auth');
+const { validateMatch, validateMatchUpdate } = require('../middleware/validation');
 
-/**
- * @route POST /api/matches
- * @desc Créer un nouveau match
- * @access Admin only
- */
-router.post('/',
-  authenticate,
-  requireAdmin,
-  validateCreateMatch,
-  createMatch
-);
+// Routes publiques (pour consultation)
+router.get('/', matchesController.getAllMatches);
+router.get('/:id', matchesController.getMatchById);
 
-/**
- * @route GET /api/matches
- * @desc Récupérer tous les matchs avec filtres optionnels
- * @access Public
- */
-router.get('/',
-  validateQueryParams,
-  getAllMatches
-);
+// Routes protégées (nécessitent une authentification)
+router.use(authenticateToken);
 
-/**
- * @route GET /api/matches/:id
- * @desc Récupérer un match par son ID
- * @access Public
- */
-router.get('/:id',
-  getMatchById
-);
+// Création d'un nouveau match
+router.post('/', validateMatch, matchesController.createMatch);
 
-/**
- * @route PUT /api/matches/:id
- * @desc Mettre à jour un match
- * @access Admin only
- */
-router.put('/:id',
-  authenticate,
-  requireAdmin,
-  validateUpdateMatch,
-  updateMatch
-);
+// Mise à jour d'un match
+router.put('/:id', validateMatchUpdate, matchesController.updateMatch);
 
-/**
- * @route DELETE /api/matches/:id
- * @desc Supprimer un match
- * @access Admin only
- */
-router.delete('/:id',
-  authenticate,
-  requireAdmin,
-  deleteMatch
-);
+// Suppression d'un match
+router.delete('/:id', matchesController.deleteMatch);
 
-/**
- * @route PATCH /api/matches/:id/toggle-presence
- * @desc Basculer l'ouverture/fermeture des présences
- * @access Admin only
- */
-router.patch('/:id/toggle-presence',
-  authenticate,
-  requireAdmin,
-  togglePresence
-);
+// Routes spécifiques aux présences
+router.post('/:id/presences', matchesController.updatePresences);
+router.get('/:id/presences', matchesController.getPresences);
 
 module.exports = router;
