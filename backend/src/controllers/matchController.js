@@ -32,7 +32,7 @@ const createMatch = async (req, res) => {
 
     const match = await Match.create({
       date,
-     adversaire,
+      adversaire,
       lieu,
       domicile,
       statut,
@@ -189,7 +189,7 @@ const updateMatch = async (req, res) => {
     }
 
     // Validation spécifique pour la date
-    if (updates.date && new Date(updates.date) <= new Date()) {
+    if (updates.date_match && new Date(updates.date_match) <= new Date()) {
       return res.status(400).json({
         error: 'La date du match doit être dans le futur'
       });

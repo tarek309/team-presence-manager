@@ -51,8 +51,8 @@ const validateMatch = [
     
   body('type_match')
     .optional()
-    .isIn(['match', 'training', 'tournament', 'friendly','amical'])
-    .withMessage('Le type doit être: match, training, tournament ou friendly'),
+    .isIn(['championnat', 'coupe', 'entrainement', 'amical'])
+    .withMessage('Le type doit être: championnat, coupe, entrainement, amical'),
     
     
   handleValidationErrors
@@ -80,16 +80,15 @@ const validateMatchUpdate = [
     .optional()
     .isLength({ min: 2, max: 200 })
     .withMessage('Le lieu doit contenir entre 2 et 200 caractères'),
-    
-  body('type_match')
+   body('type_match')
     .optional()
-    .isIn(['match', 'training', 'tournament', 'friendly'])
-    .withMessage('Le type doit être: match, training, tournament ou friendly'),
+    .isIn(['championnat', 'coupe', 'entrainement', 'amical'])
+    .withMessage('Le type doit être: championnat, coupe, entrainement, amical'),
     
   body('statut')
     .optional()
-    .isIn(['upcoming', 'ongoing', 'finished', 'cancelled'])
-    .withMessage('Le statut doit être: upcoming, ongoing, finished ou cancelled'),
+    .isIn(['programme', 'en_cours', 'termine', 'annule','reporte'])
+    .withMessage('Le statut doit être: programme, en_cours, termine, annule,reporte'),
     
   handleValidationErrors
 ];

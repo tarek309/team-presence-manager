@@ -134,7 +134,7 @@ const getMatchById = async (req, res) => {
  */
 const createMatch = async (req, res) => {
   try {
-    const { adversaire, date_match, lieu, type_match = 'match', statut = 'upcoming' } = req.body;
+    const { adversaire, date_match, lieu, type_match = 'amical', statut = 'programme' } = req.body;
     console.log('➕ Création d\'un nouveau match:', { adversaire, date_match, lieu, type_match });
     
     const query = `
