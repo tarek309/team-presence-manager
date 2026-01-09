@@ -37,4 +37,5 @@ const authenticateToken = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('❌ Erreur d\'authent
+    console.error('❌ Erreur d\'authent')}
+  }

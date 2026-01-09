@@ -10,12 +10,12 @@ const createMatch = async (req, res) => {
   try {
     const {
       date,
-      opponent,
-      location,
-      isHome = true,
-      status = 'scheduled',
-      scoreTeam,
-      scoreOpponent,
+      adversaire,
+      lieu,
+      domicile = true,
+      statut = 'scheduled',
+      score_equipe,
+      score_adversaire,
       presenceOpen = false,
       manOfMatchId
     } = req.body;
@@ -32,12 +32,12 @@ const createMatch = async (req, res) => {
 
     const match = await Match.create({
       date,
-      opponent,
-      location,
-      isHome,
-      status,
-      scoreTeam,
-      scoreOpponent,
+     adversaire,
+      lieu,
+      domicile,
+      statut,
+      score_equipe,
+      score_adversaire,
       presenceOpen,
       manOfMatchId
     });

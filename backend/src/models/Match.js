@@ -217,4 +217,6 @@ class Match {
       
       return this;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du
+      console.error('Erreur lors de la mise à jour ')}
+    }
+  }

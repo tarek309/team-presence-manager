@@ -2,8 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const matchesController = require('../controllers/matchesController');
-const { authenticateToken } = require('../middleware/auth');
-const { validateMatch, validateMatchUpdate } = require('../middleware/validation');
+const authenticateToken = require('../middlewares/authMiddleware');
+const { validateMatch, validateMatchUpdate } = require('../middlewares/validation');
 
 // Routes publiques (pour consultation)
 router.get('/', matchesController.getAllMatches);

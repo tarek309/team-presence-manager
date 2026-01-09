@@ -1,5 +1,5 @@
 // backend/src/controllers/matchesController.js
-const { pool } = require('../server');
+const { pool } = require('../config/database');
 
 /**
  * Récupérer tous les matches
@@ -8,19 +8,12 @@ const getAllMatches = async (req, res) => {
   try {
     console.log('📊 Récupération de tous les matches');
     
-    const { page = 1, limit = 10, status, date_from, date_to } = req.query;
+    const { page = 1, limit = 10, statut, date_from, date_to } = req.query;
     const offset = (page - 1) * limit;
     
     let query = `
       SELECT 
-        id, 
-        opponent, 
-        date, 
-        location, 
-        type, 
-        status,
-        created_at,
-        updated_at
+        id, adversaire, date_match, lieu, type_match, domicile, description, statut, score_equipe, score_adversaire, created_at, updated_at
       FROM matches
       WHERE 1=1
     `;
@@ -29,35 +22,35 @@ const getAllMatches = async (req, res) => {
     let paramIndex = 1;
     
     // Filtres
-    if (status) {
-      query += ` AND status = $${paramIndex}`;
-      queryParams.push(status);
+    if (statut) {
+      query += ` AND statut = $${paramIndex}`;
+      queryParams.push(statut);
       paramIndex++;
     }
     
     if (date_from) {
-      query += ` AND date >= $${paramIndex}`;
+      query += ` AND date_match >= $${paramIndex}`;
       queryParams.push(date_from);
       paramIndex++;
     }
     
     if (date_to) {
-      query += ` AND date <= $${paramIndex}`;
+      query += ` AND date_match <= $${paramIndex}`;
       queryParams.push(date_to);
       paramIndex++;
     }
     
     // Tri et pagination
-    query += ` ORDER BY date DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` ORDER BY date_match DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     queryParams.push(limit, offset);
     
     const result = await pool.query(query, queryParams);
     
     // Comptage total pour la pagination
     const countQuery = `SELECT COUNT(*) FROM matches WHERE 1=1` +
-      (status ? ` AND status = '${status}'` : '') +
-      (date_from ? ` AND date >= '${date_from}'` : '') +
-      (date_to ? ` AND date <= '${date_to}'` : '');
+      (statut ? ` AND statut = '${statut}'` : '') +
+      (date_from ? ` AND date_match >= '${date_from}'` : '') +
+      (date_to ? ` AND date_match <= '${date_to}'` : '');
     
     const countResult = await pool.query(countQuery);
     const total = parseInt(countResult.rows[0].count);
@@ -91,15 +84,8 @@ const getMatchById = async (req, res) => {
     
     const query = `
       SELECT 
-        id, 
-        opponent, 
-        date, 
-        location, 
-        type, 
-        status,
-        created_at,
-        updated_at
-      FROM matches 
+        id, adversaire, date_match, lieu, type_match, domicile, description, statut, score_equipe, score_adversaire, created_at, updated_at
+      FROM matches
       WHERE id = $1
     `;
     
@@ -116,13 +102,13 @@ const getMatchById = async (req, res) => {
     const presencesQuery = `
       SELECT 
         u.id as user_id,
-        u.name,
+        u.nom,
         u.email,
-        p.status as presence_status,
+        p.statut as presence_status,
         p.created_at as presence_updated_at
       FROM users u
       LEFT JOIN presences p ON u.id = p.user_id AND p.match_id = $1
-      ORDER BY u.name
+      ORDER BY u.nom
     `;
     
     const presencesResult = await pool.query(presencesQuery, [id]);
@@ -148,16 +134,17 @@ const getMatchById = async (req, res) => {
  */
 const createMatch = async (req, res) => {
   try {
-    const { opponent, date, location, type = 'match', status = 'upcoming' } = req.body;
-    console.log('➕ Création d\'un nouveau match:', { opponent, date, location, type });
+    const { adversaire, date_match, lieu, type_match = 'match', statut = 'upcoming' } = req.body;
+    console.log('➕ Création d\'un nouveau match:', { adversaire, date_match, lieu, type_match });
     
     const query = `
-      INSERT INTO matches (opponent, date, location, type, status)
+      INSERT INTO matches 
+       (adversaire, date_match, lieu, type_match, statut)
       VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, opponent, date, location, type, status, created_at, updated_at
+      RETURNING id, adversaire, date_match, lieu, type_match, statut, created_at, updated_at
     `;
     
-    const result = await pool.query(query, [opponent, date, location, type, status]);
+    const result = await pool.query(query, [adversaire, date_match, lieu, type_match, statut]);
     const newMatch = result.rows[0];
     
     console.log('✅ Match créé avec succès:', newMatch.id);
@@ -185,7 +172,7 @@ const createMatch = async (req, res) => {
 const updateMatch = async (req, res) => {
   try {
     const { id } = req.params;
-    const { opponent, date, location, type, status } = req.body;
+    const { adversaire, date_match, lieu, type_match, statut } = req.body;
     console.log(`📝 Mise à jour du match ID: ${id}`);
     
     // Vérifier que le match existe
@@ -199,33 +186,33 @@ const updateMatch = async (req, res) => {
     const values = [];
     let paramIndex = 1;
     
-    if (opponent !== undefined) {
-      updateFields.push(`opponent = $${paramIndex}`);
-      values.push(opponent);
+    if (adversaire !== undefined) {
+      updateFields.push(`adversaire = $${paramIndex}`);
+      values.push(adversaire);
       paramIndex++;
     }
     
-    if (date !== undefined) {
-      updateFields.push(`date = $${paramIndex}`);
-      values.push(date);
+    if (date_match !== undefined) {
+      updateFields.push(`date_match = $${paramIndex}`);
+      values.push(date_match);
       paramIndex++;
     }
     
-    if (location !== undefined) {
-      updateFields.push(`location = $${paramIndex}`);
-      values.push(location);
+    if (lieu !== undefined) {
+      updateFields.push(`lieu = $${paramIndex}`);
+      values.push(lieu);
       paramIndex++;
     }
     
-    if (type !== undefined) {
-      updateFields.push(`type = $${paramIndex}`);
-      values.push(type);
+    if (type_match !== undefined) {
+      updateFields.push(`type_match = $${paramIndex}`);
+      values.push(type_match);
       paramIndex++;
     }
     
-    if (status !== undefined) {
-      updateFields.push(`status = $${paramIndex}`);
-      values.push(status);
+    if (statut !== undefined) {
+      updateFields.push(`statut = $${paramIndex}`);
+      values.push(statut);
       paramIndex++;
     }
     
@@ -240,7 +227,7 @@ const updateMatch = async (req, res) => {
       UPDATE matches 
       SET ${updateFields.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, opponent, date, location, type, status, created_at, updated_at
+      RETURNING id, adversaire, date_match, lieu, type_match, statut, created_at, updated_at
     `;
     
     const result = await pool.query(query, values);
@@ -311,15 +298,15 @@ const updatePresences = async (req, res) => {
       await client.query('BEGIN');
       
       for (const presence of presences) {
-        const { user_id, status } = presence;
+        const { user_id, statut } = presence;
         
         // Upsert de la présence
         await client.query(`
-          INSERT INTO presences (user_id, match_id, status)
+          INSERT INTO presences (user_id, match_id, statut)
           VALUES ($1, $2, $3)
           ON CONFLICT (user_id, match_id)
           DO UPDATE SET status = $3, updated_at = NOW()
-        `, [user_id, id, status]);
+        `, [user_id, id, statut]);
       }
       
       await client.query('COMMIT');
@@ -354,15 +341,15 @@ const getPresences = async (req, res) => {
     const query = `
       SELECT 
         u.id as user_id,
-        u.name,
+        u.nom,
         u.email,
         u.role,
-        COALESCE(p.status, 'unknown') as status,
+        COALESCE(p.statut, 'unknown') as status,
         p.updated_at
       FROM users u
       LEFT JOIN presences p ON u.id = p.user_id AND p.match_id = $1
       WHERE u.role IN ('player', 'coach', 'staff')
-      ORDER BY u.role, u.name
+      ORDER BY u.role, u.nom
     `;
     
     const result = await pool.query(query, [id]);
@@ -376,7 +363,7 @@ const getPresences = async (req, res) => {
     };
     
     result.rows.forEach(row => {
-      stats[row.status] = (stats[row.status] || 0) + 1;
+      stats[row.statut] = (stats[row.statut] || 0) + 1;
     });
     
     res.json({

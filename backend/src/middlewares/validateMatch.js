@@ -4,7 +4,7 @@ const { body, query, validationResult } = require('express-validator');
  * Validation pour la création d'un match
  */
 const validateCreateMatch = [
-  body('date')
+  body('date_match')
     .isISO8601()
     .withMessage('La date doit être au format ISO 8601')
     .custom((value) => {
@@ -16,34 +16,25 @@ const validateCreateMatch = [
       return true;
     }),
   
-  body('opponent')
+  body('adversaire')
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('Le nom de l\'adversaire doit contenir entre 2 et 100 caractères')
     .matches(/^[a-zA-ZÀ-ÿ0-9\s\-'\.]+$/)
     .withMessage('Le nom de l\'adversaire contient des caractères non autorisés'),
   
-  body('location')
+  body('lieu')
     .trim()
     .isLength({ min: 2, max: 200 })
     .withMessage('Le lieu doit contenir entre 2 et 200 caractères'),
   
-  body('isHome')
-    .optional()
-    .isBoolean()
-    .withMessage('isHome doit être un booléen'),
   
-  body('status')
-    .optional()
-    .isIn(['scheduled', 'completed', 'cancelled'])
-    .withMessage('Le statut doit être scheduled, completed ou cancelled'),
-  
-  body('scoreTeam')
+  body('score_equipe')
     .optional()
     .isInt({ min: 0 })
     .withMessage('Le score de l\'équipe doit être un entier positif'),
   
-  body('scoreOpponent')
+  body('score_adversaire')
     .optional()
     .isInt({ min: 0 })
     .withMessage('Le score de l\'adversaire doit être un entier positif'),
@@ -70,39 +61,31 @@ const validateCreateMatch = [
  * Validation pour la mise à jour d'un match
  */
 const validateUpdateMatch = [
-  body('date')
+  body('date_match')
     .optional()
     .isISO8601()
     .withMessage('La date doit être au format ISO 8601'),
   
-  body('opponent')
+  body('adversaire')
     .optional()
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('Le nom de l\'adversaire doit contenir entre 2 et 100 caractères'),
   
-  body('location')
+  body('lieu')
     .optional()
     .trim()
     .isLength({ min: 2, max: 200 })
     .withMessage('Le lieu doit contenir entre 2 et 200 caractères'),
   
-  body('isHome')
-    .optional()
-    .isBoolean()
-    .withMessage('isHome doit être un booléen'),
   
-  body('status')
-    .optional()
-    .isIn(['scheduled', 'completed', 'cancelled'])
-    .withMessage('Le statut doit être scheduled, completed ou cancelled'),
   
-  body('scoreTeam')
+   body('score_equipe')
     .optional()
     .isInt({ min: 0 })
     .withMessage('Le score de l\'équipe doit être un entier positif'),
   
-  body('scoreOpponent')
+  body('score_adversaire')
     .optional()
     .isInt({ min: 0 })
     .withMessage('Le score de l\'adversaire doit être un entier positif'),
@@ -134,10 +117,7 @@ const validateUpdateMatch = [
  * Validation pour les paramètres de requête
  */
 const validateQueryParams = [
-  query('status')
-    .optional()
-    .isIn(['scheduled', 'completed', 'cancelled'])
-    .withMessage('Le statut doit être scheduled, completed ou cancelled'),
+ 
   
   query('limit')
     .optional()

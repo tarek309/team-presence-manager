@@ -21,13 +21,13 @@ const handleValidationErrors = (req, res, next) => {
  * Validation pour la création d'un match
  */
 const validateMatch = [
-  body('opponent')
+  body('adversaire')
     .notEmpty()
     .withMessage('L\'adversaire est requis')
     .isLength({ min: 2, max: 100 })
     .withMessage('L\'adversaire doit contenir entre 2 et 100 caractères'),
     
-  body('date')
+  body('date_match')
     .notEmpty()
     .withMessage('La date est requise')
     .isISO8601()
@@ -43,21 +43,17 @@ const validateMatch = [
       return true;
     }),
     
-  body('location')
+  body('lieu')
     .notEmpty()
     .withMessage('Le lieu est requis')
     .isLength({ min: 2, max: 200 })
     .withMessage('Le lieu doit contenir entre 2 et 200 caractères'),
     
-  body('type')
+  body('type_match')
     .optional()
-    .isIn(['match', 'training', 'tournament', 'friendly'])
+    .isIn(['match', 'training', 'tournament', 'friendly','amical'])
     .withMessage('Le type doit être: match, training, tournament ou friendly'),
     
-  body('status')
-    .optional()
-    .isIn(['upcoming', 'ongoing', 'finished', 'cancelled'])
-    .withMessage('Le statut doit être: upcoming, ongoing, finished ou cancelled'),
     
   handleValidationErrors
 ];
@@ -70,27 +66,27 @@ const validateMatchUpdate = [
     .isInt({ min: 1 })
     .withMessage('L\'ID du match doit être un entier positif'),
     
-  body('opponent')
+  body('adversaire')
     .optional()
     .isLength({ min: 2, max: 100 })
     .withMessage('L\'adversaire doit contenir entre 2 et 100 caractères'),
     
-  body('date')
+  body('date_match')
     .optional()
     .isISO8601()
     .withMessage('La date doit être au format ISO 8601'),
     
-  body('location')
+  body('lieu')
     .optional()
     .isLength({ min: 2, max: 200 })
     .withMessage('Le lieu doit contenir entre 2 et 200 caractères'),
     
-  body('type')
+  body('type_match')
     .optional()
     .isIn(['match', 'training', 'tournament', 'friendly'])
     .withMessage('Le type doit être: match, training, tournament ou friendly'),
     
-  body('status')
+  body('statut')
     .optional()
     .isIn(['upcoming', 'ongoing', 'finished', 'cancelled'])
     .withMessage('Le statut doit être: upcoming, ongoing, finished ou cancelled'),
