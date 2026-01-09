@@ -13,7 +13,7 @@ function App() {
   useEffect(() => {
     const testApiConnection = async () => {
       try {
-        const response = await axios.get('/api/health')
+        const response = await axios.get('/health')
         setApiStatus('success')
         setApiMessage(response.data.message)
       } catch (error) {

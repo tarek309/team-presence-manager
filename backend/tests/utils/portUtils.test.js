@@ -75,10 +75,10 @@ describe('Port Utils', () => {
     
     it('devrait trouver le port suivant si le premier est occupé', async () => {
       // Occuper le port 3001
-      const server = await createTestServer(3001);
+      const server = await createTestServer(3000);
       
-      const freePort = await findFreePort(3001, 'localhost', 10);
-      expect(freePort).toBeGreaterThan(3001);
+      const freePort = await findFreePort(3000, 'localhost', 10);
+      expect(freePort).toBeGreaterThan(3000);
     });
     
     it('devrait lever une erreur si aucun port libre n\'est trouvé dans la plage', async () => {

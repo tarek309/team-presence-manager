@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuration de base pour les appels API
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Instance axios avec configuration de base
 const apiClient = axios.create({
