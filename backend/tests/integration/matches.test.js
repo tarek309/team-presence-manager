@@ -43,10 +43,10 @@ describe('Matches API', () => {
 
   describe('POST /api/matches', () => {
     const validMatchData = {
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Dans 7 jours
-      opponent: 'FC Test',
-      location: 'Stade Municipal',
-      isHome: true
+      date_match: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Dans 7 jours
+      adversaire: 'FC Test',
+      lieu: 'Stade Municipal',
+      domicile: true
     };
 
     it('devrait créer un match avec un token admin', async () => {
@@ -58,8 +58,8 @@ describe('Matches API', () => {
       expect(response.status).toBe(201);
       expect(response.body.message).toBe('Match créé avec succès');
       expect(response.body.match).toHaveProperty('id');
-      expect(response.body.match.opponent).toBe(validMatchData.opponent);
-      expect(response.body.match.location).toBe(validMatchData.location);
+      expect(response.body.match.adversaire).toBe(validMatchData.adversaire);
+      expect(response.body.match.lieu).toBe(validMatchData.lieu);
     });
 
     it('devrait retourner 401 sans token', async () => {
@@ -97,4 +97,10 @@ describe('Matches API', () => {
       expect(response.body.details).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            msg: '
+            msg: ''})
+          ])
+        );
+      });
+    });
+  })
+    

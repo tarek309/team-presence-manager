@@ -1,196 +1,157 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const helmet = require('helmet');
+// backend/src/server.js
 require('dotenv').config();
+const app = require('./app');
+const { Pool } = require('pg');
 
-const authRoutes = require('./routes/auth');
-//const adminRoutes = require('./routes/admin');
-//const playerRoutes = require('./routes/player');
-//const matchRoutes = require('./routes/match');
-const { getAvailablePort } = require('./utils/portUtils');
+const PORT = process.env.PORT || 3000;
+let server;
 
-const app = express();
+// Configuration de la base de données
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// Variables globales pour la gestion du serveur
-let server = null;
-let isShuttingDown = false;
+// Test de la connexion à la base de données
+async function testDatabaseConnection() {
+  try {
+    const client = await pool.connect();
+    console.log('✅ Connexion à la base de données réussie');
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur de connexion à la base de données:', error.message);
+    return false;
+  }
+}
 
-// Configuration CORS
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-
-// Middlewares
-app.use(helmet());
-app.use(cors(corsOptions));
-app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
-
-// Routes
-app.use('/api/auth', authRoutes);
-//app.use('/api/admin', adminRoutes);
-//app.use('/api/player', playerRoutes);
-//app.use('/api/matches', matchRoutes);
-
-// Route de health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage()
+// Fonction de vérification si le port est disponible
+function checkPortAvailability(port) {
+  return new Promise((resolve) => {
+    const testServer = require('net').createServer();
+    
+    testServer.listen(port, () => {
+      testServer.close(() => resolve(true));
+    });
+    
+    testServer.on('error', () => resolve(false));
   });
-});
+}
 
-// Route par défaut
-app.get('/', (req, res) => {
-  res.json({ message: 'API Team Presence Manager - Serveur en fonctionnement' });
-});
-
-// Middleware de gestion des erreurs 404
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    error: 'Route non trouvée',
-    method: req.method,
-    url: req.originalUrl
-  });
-});
-
-// Middleware de gestion des erreurs globales
-app.use((err, req, res, next) => {
-  console.error('Erreur serveur:', err);
+// Fonction pour trouver un port disponible
+async function findAvailablePort(startPort) {
+  let port = startPort;
+  const maxPort = startPort + 10;
   
-  if (res.headersSent) {
-    return next(err);
+  while (port <= maxPort) {
+    if (await checkPortAvailability(port)) {
+      return port;
+    }
+    port++;
   }
   
-  res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Erreur interne du serveur' 
-      : err.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
-  });
-});
+  throw new Error(`Aucun port disponible entre ${startPort} et ${maxPort}`);
+}
 
-/**
- * Démarre le serveur sur un port disponible
- */
+// Démarrage du serveur
 async function startServer() {
   try {
-    const preferredPort = parseInt(process.env.PORT) || 3000;
-    const host = process.env.HOST || 'localhost';
+    // Vérifier la connexion à la base de données
+    const dbConnected = await testDatabaseConnection();
+    if (!dbConnected) {
+      console.log('⚠️  Démarrage du serveur sans connexion à la base de données');
+    }
     
     // Trouver un port disponible
-    const port = await getAvailablePort(preferredPort, host);
+    const availablePort = await findAvailablePort(PORT);
+    
+    if (availablePort !== PORT) {
+      console.log(`⚠️  Le port ${PORT} est occupé, utilisation du port ${availablePort}`);
+    }
     
     // Démarrer le serveur
-    server = app.listen(port, host, () => {
-      console.log('\n🚀 Serveur démarré avec succès !');
-      console.log(`📡 Serveur d'écoute sur: http://${host}:${port}`);
-      console.log(`🌍 Environnement: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`⏰ Démarré à: ${new Date().toLocaleString('fr-FR')}`);
-      
-      if (port !== preferredPort) {
-        console.log(`ℹ️  Note: Port ${preferredPort} occupé, utilisation du port ${port}`);
-      }
-      
-      console.log('\n📋 Routes disponibles:');
-      console.log(`   GET  http://${host}:${port}/health - Health check`);
-      console.log(`   POST http://${host}:${port}/api/auth/* - Authentification`);
-      console.log(`   *    http://${host}:${port}/api/* - API endpoints`);
-      console.log('\n✋ Utilisez Ctrl+C pour arrêter le serveur\n');
+    server = app.listen(availablePort, () => {
+      console.log(`🚀 Serveur démarré sur le port ${availablePort}`);
+      console.log(`📍 URL: http://localhost:${availablePort}`);
+      console.log(`🏥 Health check: http://localhost:${availablePort}/health`);
+      console.log(`📊 API Routes disponibles:`);
+      console.log(`   - POST http://localhost:${availablePort}/api/auth/login`);
+      console.log(`   - POST http://localhost:${availablePort}/api/auth/register`);
+      console.log(`   - GET  http://localhost:${availablePort}/api/matches`);
+      console.log(`   - POST http://localhost:${availablePort}/api/matches`);
+      console.log(`   - GET  http://localhost:${availablePort}/api/matches/:id`);
+      console.log(`   - PUT  http://localhost:${availablePort}/api/matches/:id`);
+      console.log(`   - DELETE http://localhost:${availablePort}/api/matches/:id`);
     });
     
-    // Gestion des erreurs du serveur
     server.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Erreur: Port ${port} déjà utilisé`);
-        console.log('🔄 Redémarrage avec recherche automatique d\'un nouveau port...');
-        setTimeout(() => startServer(), 1000);
+        console.error(`❌ Le port ${availablePort} est déjà utilisé`);
+        console.log('💡 Solutions possibles:');
+        console.log('   1. Arrêter le processus utilisant le port');
+        console.log('   2. Utiliser un autre port avec PORT=XXXX npm run dev');
+        console.log('   3. Redémarrer le serveur (il trouvera automatiquement un port libre)');
       } else {
-        console.error('❌ Erreur serveur:', error);
-        process.exit(1);
+        console.error('❌ Erreur serveur:', error.message);
       }
+      process.exit(1);
     });
     
-    return server;
-    
   } catch (error) {
-    console.error('❌ Erreur lors du démarrage du serveur:', error);
+    console.error('❌ Erreur lors du démarrage du serveur:', error.message);
     process.exit(1);
   }
 }
 
-/**
- * Arrêt gracieux du serveur
- * @param {string} signal - Le signal reçu
- */
+// Gestion de l'arrêt propre du serveur
 function gracefulShutdown(signal) {
-  if (isShuttingDown) {
-    console.log('⏳ Arrêt déjà en cours...');
-    return;
-  }
-  
-  isShuttingDown = true;
-  console.log(`\n🛑 Signal ${signal} reçu, arrêt du serveur...`);
+  console.log(`\n📶 Signal ${signal} reçu, arrêt du serveur...`);
   
   if (server) {
-    server.close((err) => {
-      if (err) {
-        console.error('❌ Erreur lors de l\'arrêt du serveur:', err);
+    server.close((error) => {
+      if (error) {
+        console.error('❌ Erreur lors de la fermeture du serveur:', error.message);
         process.exit(1);
       }
       
-      console.log('✅ Serveur arrêté proprement');
-      console.log(`⏰ Arrêté à: ${new Date().toLocaleString('fr-FR')}`);
-      process.exit(0);
+      console.log('✅ Serveur fermé proprement');
+      
+      // Fermer le pool de connexions
+      pool.end(() => {
+        console.log('✅ Connexions à la base de données fermées');
+        process.exit(0);
+      });
     });
     
-    // Force l'arrêt après 10 secondes
+    // Forcer l'arrêt si le serveur ne se ferme pas dans les 10 secondes
     setTimeout(() => {
-      console.log('⚠️  Arrêt forcé du serveur (timeout)');
+      console.error('❌ Arrêt forcé du serveur (timeout)');
       process.exit(1);
     }, 10000);
-    
   } else {
-    console.log('✅ Aucun serveur à arrêter');
     process.exit(0);
   }
 }
 
-// Gestion des signaux de fermeture
+// Écouter les signaux d'arrêt
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGQUIT', () => gracefulShutdown('SIGQUIT'));
 
 // Gestion des erreurs non capturées
 process.on('uncaughtException', (error) => {
   console.error('❌ Exception non capturée:', error);
-  gracefulShutdown('UNCAUGHT_EXCEPTION');
+  gracefulShutdown('uncaughtException');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Promesse rejetée non gérée:', reason);
-  console.error('   Promise:', promise);
-  gracefulShutdown('UNHANDLED_REJECTION');
+  gracefulShutdown('unhandledRejection');
 });
 
-// Démarrage du serveur uniquement si ce fichier est exécuté directement
+// Exporter le pool pour les autres modules
+module.exports = { pool };
+
+// Démarrer le serveur seulement si ce fichier est exécuté directement
 if (require.main === module) {
   startServer();
 }
-
-// Exports pour les tests
-module.exports = { 
-  app, 
-  startServer, 
-  gracefulShutdown,
-  getServer: () => server
-};

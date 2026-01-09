@@ -1,56 +1,39 @@
-const AuthService = require('../services/authService');
+// backend/src/middleware/authMiddleware.js
+// Middleware pour vérifier le token JWT
 
-/**
- * Middleware d'authentification
- * Vérifie la présence et la validité du token JWT
- */
-const authMiddleware = async (req, res, next) => {
+const jwt = require('jsonwebtoken');
+
+module.exports = (req, res, next) => {
   try {
     // Récupérer le token depuis le header Authorization
     const authHeader = req.headers.authorization;
     
-    if (!authHeader) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token d\'authentification manquant'
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Token manquant. Format: Authorization: Bearer <token>' 
       });
     }
-
-    // Vérifier le format "Bearer TOKEN"
+    
     const token = authHeader.split(' ')[1];
     
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Format du token invalide'
-      });
-    }
-
-    // Vérifier et récupérer l'utilisateur
-    const user = await AuthService.getUserFromToken(token);
+    // Vérifier et décoder le token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Ajouter l'utilisateur à la requête
-    req.user = user;
+    // Ajouter les infos utilisateur à req
+    req.user = {
+      id: decoded.userId || decoded.id,
+      email: decoded.email,
+      role: decoded.role
+    };
     
     next();
   } catch (error) {
-    console.error('Erreur middleware auth:', error.message);
-    
-    // Gérer les différents types d'erreurs
-    let statusCode = 401;
-    let message = 'Token invalide';
-
-    if (error.message.includes('expiré')) {
-      message = 'Token expiré';
-    } else if (error.message.includes('Utilisateur non trouvé')) {
-      message = 'Utilisateur non trouvé';
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expiré' });
     }
-
-    return res.status(statusCode).json({
-      success: false,
-      message
-    });
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token invalide' });
+    }
+    return res.status(401).json({ error: 'Authentification échouée' });
   }
 };
-
-module.exports = authMiddleware;
