@@ -1,99 +1,100 @@
-import React, { useState, useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
-import axios from 'axios'
+import React from 'react'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import Login from './components/Login.jsx'
+import Register from './components/Register.jsx'
+import Matches from './components/matches/Match.jsx'
+import './App.css'
 
-// Configuration d'Axios pour les appels API
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-
+/**
+ * Composant principal de l'application
+ * Gère le routing et la navigation générale
+ */
 function App() {
-  const [apiStatus, setApiStatus] = useState('loading')
-  const [apiMessage, setApiMessage] = useState('')
-
-  // Test de connexion à l'API au chargement
-  useEffect(() => {
-    const testApiConnection = async () => {
-      try {
-        const response = await axios.get('/health')
-        setApiStatus('success')
-        setApiMessage(response.data.message)
-      } catch (error) {
-        setApiStatus('error')
-        setApiMessage('Erreur de connexion à l\'API')
-        console.error('Erreur API:', error)
-      }
-    }
-
-    testApiConnection()
-  }, [])
-
+  const location = useLocation()
+  
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>⚽ Team Presence Manager</h1>
-        <p>Gestion de présences pour équipe de football amateur</p>
-      </header>
-
-      <main className="app-main">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/about" element={<AboutPage />} />
-        </Routes>
-
-        {/* Statut de connexion à l'API */}
-        <section className="api-status">
-          <h2>État de l'API</h2>
-          <div className={`status-indicator ${apiStatus}`}>
-            {apiStatus === 'loading' && '⏳ Vérification...'}
-            {apiStatus === 'success' && '✅ Connecté'}
-            {apiStatus === 'error' && '❌ Déconnecté'}
+    <div className="App">
+      {/* Barre de navigation principale */}
+      <nav className="navbar">
+        <div className="nav-container">
+          <Link to="/" className="nav-logo">
+            Team Manager
+          </Link>
+          
+          <div className="nav-links">
+            <Link 
+              to="/login" 
+              className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
+            >
+              Connexion
+            </Link>
+            <Link 
+              to="/register" 
+              className={`nav-link ${location.pathname === '/register' ? 'active' : ''}`}
+            >
+              Inscription
+            </Link>
+            <Link 
+              to="/matches" 
+              className={`nav-link ${location.pathname === '/matches' ? 'active' : ''}`}
+            >
+              Matchs
+            </Link>
           </div>
-          <p>{apiMessage}</p>
-        </section>
-      </main>
+        </div>
+      </nav>
 
-      <footer className="app-footer">
-        <p>&copy; 2024 Team Presence Manager</p>
-      </footer>
+      {/* Configuration des routes */}
+      <main className="main-content">
+        <Routes>
+          {/* Page d'accueil */}
+          <Route 
+            path="/" 
+            element={
+              <div className="home-page">
+                <h1>Bienvenue sur Team Manager</h1>
+                <p>Gérez facilement les présences de votre équipe de football</p>
+                <div className="home-actions">
+                  <Link to="/login" className="btn btn-primary">
+                    Se connecter
+                  </Link>
+                  <Link to="/register" className="btn btn-secondary">
+                    S'inscrire
+                  </Link>
+                </div>
+              </div>
+            } 
+          />
+          
+          {/* Page de connexion */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Page d'inscription */}
+          <Route path="/register" element={<Register />} />
+          
+          {/* Page des matchs */}
+          <Route path="/matches" element={<Matches />} />
+          
+          {/* Routes admin (pour éviter les erreurs futures) */}
+          <Route path="/admin/matches/match" element={<Matches />} />
+          
+          {/* Route 404 - Page non trouvée */}
+          <Route 
+            path="*" 
+            element={
+              <div className="not-found">
+                <h2>Page non trouvée</h2>
+                <p>La page que vous cherchez n'existe pas.</p>
+                <Link to="/" className="btn btn-primary">
+                  Retour à l'accueil
+                </Link>
+              </div>
+            } 
+          />
+        </Routes>
+      </main>
     </div>
   )
 }
-
-// Composant page d'accueil
-const HomePage = () => (
-  <section>
-    <h2>🏠 Accueil</h2>
-    <div className="welcome-content">
-      <p>Bienvenue dans l'application de gestion de présences !</p>
-      <div className="features-preview">
-        <h3>Fonctionnalités à venir :</h3>
-        <ul>
-          <li>👥 Gestion des joueurs</li>
-          <li>📅 Planification des événements</li>
-          <li>✅ Suivi des présences</li>
-          <li>📊 Statistiques d'équipe</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-)
-
-// Composant page à propos
-const AboutPage = () => (
-  <section>
-    <h2>ℹ️ À propos</h2>
-    <div className="about-content">
-      <p>
-        Team Presence Manager est une application web développée pour faciliter 
-        la gestion des présences dans les équipes de football amateur.
-      </p>
-      <h3>Stack technique :</h3>
-      <ul>
-        <li>🚀 Frontend : React 18 + Vite</li>
-        <li>⚙️ Backend : Node.js + Express</li>
-        <li>🗄️ Base de données : PostgreSQL (à venir)</li>
-      </ul>
-    </div>
-  </section>
-)
 
 export default App

@@ -1,290 +1,208 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { authService } from '../services/authService';
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import './Auth.css'
 
 /**
- * Composant d'inscription
+ * Composant d'inscription utilisateur
  * Permet aux nouveaux utilisateurs de créer un compte
  */
-const Register = () => {
-  const navigate = useNavigate();
+function Register() {
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    name: '',
-    role: 'player'
-  });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState('');
+    confirmPassword: ''
+  })
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
 
   /**
-   * Validation côté client du formulaire
-   * @returns {boolean} True si le formulaire est valide
-   */
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Validation email
-    if (!formData.email) {
-      newErrors.email = 'L\'email est requis';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
-    }
-
-    // Validation nom
-    if (!formData.name) {
-      newErrors.name = 'Le nom est requis';
-    } else if (formData.name.length < 2) {
-      newErrors.name = 'Le nom doit contenir au moins 2 caractères';
-    }
-
-    // Validation mot de passe
-    if (!formData.password) {
-      newErrors.password = 'Le mot de passe est requis';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 8 caractères';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.password)) {
-      newErrors.password = 'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial';
-    }
-
-    // Validation confirmation mot de passe
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Veuillez confirmer le mot de passe';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-    }
-
-    // Validation rôle
-    if (!formData.role) {
-      newErrors.role = 'Veuillez sélectionner un rôle';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  /**
-   * Gestion des changements dans les champs du formulaire
+   * Gère les changements dans les champs du formulaire
    */
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: value
-    }));
-    
-    // Effacer l'erreur du champ modifié
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-    
-    // Vérification en temps réel de la confirmation du mot de passe
-    if (name === 'confirmPassword' || name === 'password') {
-      if (errors.confirmPassword) {
-        setErrors(prev => ({
-          ...prev,
-          confirmPassword: ''
-        }));
-      }
-    }
-    
-    // Effacer l'erreur API
-    if (apiError) {
-      setApiError('');
-    }
-  };
+    }))
+    // Effacer l'erreur quand l'utilisateur tape
+    if (error) setError('')
+  }
 
   /**
-   * Soumission du formulaire d'inscription
+   * Valide le formulaire côté client
+   */
+  const validateForm = () => {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError('Veuillez remplir tous les champs')
+      return false
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Les mots de passe ne correspondent pas')
+      return false
+    }
+
+    if (formData.password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères')
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Gère la soumission du formulaire d'inscription
    */
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    setApiError('');
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
 
     try {
-      // Préparation des données pour l'API
-      const registerData = {
-        email: formData.email,
-        password: formData.password,
-        name: formData.name,
-        role: formData.role
-      };
+      // Validation côté client
+      if (!validateForm()) {
+        return
+      }
 
-      const response = await authService.register(registerData);
-      
-      if (response.success) {
-        // Redirection vers la page des matchs après inscription réussie
-        navigate('/matches', { replace: true });
+      // TODO: Intégrer avec l'API backend
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Rediriger vers la page de connexion après inscription réussie
+        navigate('/login', { 
+          state: { message: 'Inscription réussie ! Vous pouvez maintenant vous connecter.' }
+        })
       } else {
-        setApiError(response.message || 'Erreur lors de l\'inscription');
+        setError(data.message || 'Erreur lors de l\'inscription')
       }
     } catch (error) {
-      setApiError(error.message || 'Erreur lors de l\'inscription. Veuillez réessayer.');
+      console.error('Erreur lors de l\'inscription:', error)
+      setError('Erreur lors de l\'inscription. Veuillez réessayer.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="register-container">
-      <div className="register-card">
-        <div className="register-header">
-          <h1>Inscription</h1>
-          <p>Créez votre compte pour rejoindre l'équipe</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="register-form" noValidate>
-          {/* Message d'erreur API */}
-          {apiError && (
-            <div className="error-message api-error">
-              <i className="error-icon">⚠️</i>
-              {apiError}
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2 className="auth-title">Inscription</h2>
+        
+        <form onSubmit={handleSubmit} className="auth-form">
+          {error && (
+            <div className="error-message">
+              {error}
             </div>
           )}
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="firstName">Prénom</label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                placeholder="Votre prénom"
+                disabled={isLoading}
+              />
+            </div>
 
-          {/* Champ Email */}
+            <div className="form-group">
+              <label htmlFor="lastName">Nom</label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                placeholder="Votre nom"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
           <div className="form-group">
-            <label htmlFor="email" className="form-label">
-              Email <span className="required">*</span>
-            </label>
+            <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`form-input ${errors.email ? 'error' : ''}`}
+              required
               placeholder="votre@email.com"
-              autoComplete="email"
               disabled={isLoading}
             />
-            {errors.email && (
-              <span className="error-text">{errors.email}</span>
-            )}
           </div>
 
-          {/* Champ Nom */}
           <div className="form-group">
-            <label htmlFor="name" className="form-label">
-              Nom complet <span className="required">*</span>
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={`form-input ${errors.name ? 'error' : ''}`}
-              placeholder="Votre nom complet"
-              autoComplete="name"
-              disabled={isLoading}
-            />
-            {errors.name && (
-              <span className="error-text">{errors.name}</span>
-            )}
-          </div>
-
-          {/* Champ Rôle */}
-          <div className="form-group">
-            <label htmlFor="role" className="form-label">
-              Rôle <span className="required">*</span>
-            </label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className={`form-select ${errors.role ? 'error' : ''}`}
-              disabled={isLoading}
-            >
-              <option value="">Sélectionnez un rôle</option>
-              <option value="player">Joueur</option>
-              <option value="coach">Entraîneur</option>
-            </select>
-            {errors.role && (
-              <span className="error-text">{errors.role}</span>
-            )}
-          </div>
-
-          {/* Champ Mot de passe */}
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Mot de passe <span className="required">*</span>
-            </label>
+            <label htmlFor="password">Mot de passe</label>
             <input
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className={`form-input ${errors.password ? 'error' : ''}`}
-              placeholder="Minimum 8 caractères"
-              autoComplete="new-password"
+              required
+              placeholder="Au moins 6 caractères"
               disabled={isLoading}
             />
-            {errors.password && (
-              <span className="error-text">{errors.password}</span>
-            )}
-            <div className="password-help">
-              <small>Le mot de passe doit contenir au moins 8 caractères avec majuscule, minuscule, chiffre et caractère spécial</small>
-            </div>
           </div>
 
-          {/* Champ Confirmation mot de passe */}
           <div className="form-group">
-            <label htmlFor="confirmPassword" className="form-label">
-              Confirmer le mot de passe <span className="required">*</span>
-            </label>
+            <label htmlFor="confirmPassword">Confirmer le mot de passe</label>
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
-              placeholder="Répétez le mot de passe"
-              autoComplete="new-password"
+              required
+              placeholder="Répétez votre mot de passe"
               disabled={isLoading}
             />
-            {errors.confirmPassword && (
-              <span className="error-text">{errors.confirmPassword}</span>
-            )}
           </div>
 
-          {/* Boutons */}
-          <div className="form-actions">
-            <button
-              type="submit"
-              className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Inscription...' : 'S\'enregistrer'}
-            </button>
-
-            <Link
-              to="/login"
-              className="btn btn-secondary"
-            >
-              Retour à la connexion
-            </Link>
-          </div>
+          <button 
+            type="submit" 
+            className="btn btn-primary btn-full"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Inscription...' : 'S\'inscrire'}
+          </button>
         </form>
 
-        <div className="register-footer">
-          <p>Déjà un compte ? <Link to="/login">Se connecter</Link></p>
+        <div className="auth-links">
+          <p>
+            Déjà un compte ? 
+            <Link to="/login" className="auth-link">
+              Se connecter
+            </Link>
+          </p>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Register;
+export default Register

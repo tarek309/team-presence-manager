@@ -1,181 +1,135 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { authService } from '../services/authService';
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import './Auth.css'
 
 /**
- * Composant de connexion
- * Permet aux utilisateurs de se connecter avec email/mot de passe
+ * Composant de connexion utilisateur
+ * Permet aux utilisateurs de se connecter à l'application
  */
-const Login = () => {
-  const navigate = useNavigate();
+function Login() {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
-  });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState('');
+  })
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
 
   /**
-   * Validation côté client du formulaire
-   * @returns {boolean} True si le formulaire est valide
-   */
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Validation email
-    if (!formData.email) {
-      newErrors.email = 'L\'email est requis';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
-    }
-
-    // Validation mot de passe
-    if (!formData.password) {
-      newErrors.password = 'Le mot de passe est requis';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  /**
-   * Gestion des changements dans les champs du formulaire
+   * Gère les changements dans les champs du formulaire
    */
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: value
-    }));
-    
-    // Effacer l'erreur du champ modifié
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-    
-    // Effacer l'erreur API
-    if (apiError) {
-      setApiError('');
-    }
-  };
+    }))
+    // Effacer l'erreur quand l'utilisateur tape
+    if (error) setError('')
+  }
 
   /**
-   * Soumission du formulaire de connexion
+   * Gère la soumission du formulaire de connexion
    */
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    setApiError('');
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
 
     try {
-      const response = await authService.login(formData);
-      
-      if (response.success) {
-        // Redirection vers la page des matchs après connexion réussie
-        navigate('/matches', { replace: true });
+      // Validation côté client
+      if (!formData.email || !formData.password) {
+        setError('Veuillez remplir tous les champs')
+        return
+      }
+
+      // TODO: Intégrer avec l'API backend
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Stocker le token d'authentification
+        localStorage.setItem('authToken', data.token)
+        // Rediriger vers la page des matchs après connexion réussie
+        navigate('/matches')
       } else {
-        setApiError(response.message || 'Erreur de connexion');
+        setError(data.message || 'Erreur de connexion')
       }
     } catch (error) {
-      setApiError(error.message || 'Erreur de connexion. Veuillez réessayer.');
+      console.error('Erreur lors de la connexion:', error)
+      setError('Erreur de connexion. Veuillez réessayer.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h1>Connexion</h1>
-          <p>Connectez-vous pour accéder à la gestion d'équipe</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="login-form" noValidate>
-          {/* Message d'erreur API */}
-          {apiError && (
-            <div className="error-message api-error">
-              <i className="error-icon">⚠️</i>
-              {apiError}
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2 className="auth-title">Connexion</h2>
+        
+        <form onSubmit={handleSubmit} className="auth-form">
+          {error && (
+            <div className="error-message">
+              {error}
             </div>
           )}
-
-          {/* Champ Email */}
+          
           <div className="form-group">
-            <label htmlFor="email" className="form-label">
-              Email <span className="required">*</span>
-            </label>
+            <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`form-input ${errors.email ? 'error' : ''}`}
+              required
               placeholder="votre@email.com"
-              autoComplete="email"
               disabled={isLoading}
             />
-            {errors.email && (
-              <span className="error-text">{errors.email}</span>
-            )}
           </div>
 
-          {/* Champ Mot de passe */}
           <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Mot de passe <span className="required">*</span>
-            </label>
+            <label htmlFor="password">Mot de passe</label>
             <input
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className={`form-input ${errors.password ? 'error' : ''}`}
+              required
               placeholder="Votre mot de passe"
-              autoComplete="current-password"
               disabled={isLoading}
             />
-            {errors.password && (
-              <span className="error-text">{errors.password}</span>
-            )}
           </div>
 
-          {/* Boutons */}
-          <div className="form-actions">
-            <button
-              type="submit"
-              className={`btn btn-primary ${isLoading ? 'loading' : ''}`}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Connexion...' : 'Se connecter'}
-            </button>
-
-            <Link
-              to="/register"
-              className="btn btn-secondary"
-            >
-              S'inscrire
-            </Link>
-          </div>
+          <button 
+            type="submit" 
+            className="btn btn-primary btn-full"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Connexion...' : 'Se connecter'}
+          </button>
         </form>
 
-        <div className="login-footer">
-          <p>Première visite ? <Link to="/register">Créez votre compte</Link></p>
+        <div className="auth-links">
+          <p>
+            Pas encore de compte ? 
+            <Link to="/register" className="auth-link">
+              S'inscrire
+            </Link>
+          </p>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login
