@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './Auth.css'
+import { authService } from '../services/authService';
 
 /**
  * Composant de connexion utilisateur
@@ -44,23 +45,18 @@ function Login() {
       }
 
       // TODO: Intégrer avec l'API backend
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      })
+      const response = await authService.login(formData);
+      
 
-      const data = await response.json()
+      
 
-      if (response.ok) {
+      if (response.success) {
         // Stocker le token d'authentification
-        localStorage.setItem('authToken', data.token)
+        localStorage.setItem('authToken', response.data.token)
         // Rediriger vers la page des matchs après connexion réussie
         navigate('/matches')
       } else {
-        setError(data.message || 'Erreur de connexion')
+        setError(response.data.message || 'Erreur de connexion')
       }
     } catch (error) {
       console.error('Erreur lors de la connexion:', error)
